@@ -18,40 +18,73 @@
 
 // ===================================================
 
+enum ModuleState
+{
+  DEFAULT_MODE,
+  CONTINOUS_MODE,
+  STANDBAY_MODE
+};
+
+// ===================================================
+
 shButton btn(BTN_PIN);
-shTaskManager tasks(1);
+shButton pir(PIR_SENSOR_PIN); // датчик движения обрабатываем как обычную кнопку
+
+shTaskManager tasks(2);
 
 shHandle pump_starting;
+shHandle pump_guard;
+
+ModuleState module_state = DEFAULT_MODE;
 
 // ===================================================
 
 void btnCheck();
 void pumpStaring();
+void pumpGuard();
 
 // ===================================================
 
 void btnCheck()
 {
-  /*
-   * - длинный клик выключает (или включает, если он выключен) модуль;
-   * - одиночный клик
-   *   - если модуль включен и в дефолтном режиме - включает помпу на пять
-   *     минут;
-   *   - если модуль выключен - включает его;
-   *   - если модуль в режиме непрерывной работы помпы - выключает помпу и
-   *     переводит модуль в дефолтный режим;
-   * - двойной клик включает режим непрерывной работы помпы;
-   */
   switch (btn.getButtonState())
   {
   case BTN_LONGCLICK:
-    /* code */
+    // длинный клик - переключает дефолтный и спящий режимы
+    module_state = (module_state != STANDBAY_MODE) ? STANDBAY_MODE
+                                                   : DEFAULT_MODE;
     break;
   case BTN_ONECLICK:
-
+    // одиночный клик
+    switch (module_state)
+    {
+    case DEFAULT_MODE:
+      // в дефолтном режиме включает помпу на пять минут, если она выключена, и наоборот
+      pumpStaring();
+      break;
+    case STANDBAY_MODE:
+    case CONTINOUS_MODE:
+      // если модуль в спящем или непрерывном режимах, переводит его в дефолтный режим
+      module_state = DEFAULT_MODE;
+      break;
+    }
     break;
   case BTN_DBLCLICK:
-    /* code */
+    // двойной клик в дефолтном режиме включает непрерывный режим
+    if (module_state == DEFAULT_MODE)
+    {
+      module_state = CONTINOUS_MODE;
+    }
+    break;
+  }
+
+  switch (pir.getButtonState())
+  {
+  case BTN_DOWN:
+    if (module_state == DEFAULT_MODE)
+    {
+      pumpStaring();
+    }
     break;
   }
 }
@@ -61,13 +94,29 @@ void pumpStaring()
   if (!tasks.getTaskState(pump_starting))
   {
     tasks.startTask(pump_starting);
-    digitalWrite(MOTOR_PIN, HIGH);
   }
   else
   {
     tasks.stopTask(pump_starting);
-    digitalWrite(MOTOR_PIN, LOW);
   }
+}
+
+void pumpGuard()
+{
+  uint8_t pump_state = LOW;
+  switch (module_state)
+  {
+  case DEFAULT_MODE:
+    pump_state = tasks.getTaskState(pump_starting);
+    break;
+  case CONTINOUS_MODE:
+    pump_state = true;
+    break;
+  default:
+    pump_state = false;
+    break;
+  }
+  digitalWrite(MOTOR_PIN, pump_state);
 }
 
 // ===================================================
@@ -76,7 +125,7 @@ void setup()
 {
   btn.setVirtualClickOn();
 
-// ===================================================
+  // ===================================================
 
   pinMode(BUZZER_PIN, OUTPUT);
   pinMode(MOTOR_PIN, OUTPUT);
@@ -88,9 +137,10 @@ void setup()
   pinMode(H_LEVEL_SENSOR_PIN, INPUT);
   pinMode(PIR_SENSOR_PIN, INPUT);
 
-// ===================================================
+  // ===================================================
 
-  pump_starting = tasks.addTask(300000, pumpStaring, false);
+  pump_starting = tasks.addTask(300000ul, pumpStaring, false);
+  pump_guard = tasks.addTask(5ul, pumpGuard);
 }
 
 void loop()
