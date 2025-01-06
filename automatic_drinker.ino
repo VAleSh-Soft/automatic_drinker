@@ -18,12 +18,12 @@
 
 // ===================================================
 
-enum ModuleState
+enum SystemMode
 {
   DEFAULT_MODE,   // дефолтный режим работы
-  CONTINOUS_MODE, // режима непрерывной работы помпы
-  STANDBAY_MODE,  // спящий режима
-  PUMP_STOP_MODE  // режим остновки помпы из-за низкого уровня воды
+  CONTINOUS_MODE, // режим непрерывной работы помпы
+  STANDBAY_MODE,  // спящий режим
+  PUMP_STOP_MODE  // режим остановки помпы из-за низкого уровня воды
 };
 
 // ===================================================
@@ -31,27 +31,29 @@ enum ModuleState
 shButton btn(BTN_PIN);
 shButton pir(PIR_SENSOR_PIN); // датчик движения обрабатываем как обычную кнопку
 
-shTaskManager tasks(4);
+shTaskManager tasks(5);
 
 shHandle pump_starting;       // включение режима работы помпы на пять минут
-shHandle pump_guard;          // собственно, отслеживание необхоимости работы помпы
+shHandle pump_guard;          // собственно, отслеживание необходимости работы помпы
 shHandle start_pump_by_timer; // периодическое включение режима работы помпы на пять минут
 shHandle level_sensor_guard;  // отслеживание датчика низкого уровня воды
+shHandle led_guard;           // управление светодиодами
 
-ModuleState current_mode = DEFAULT_MODE;
+SystemMode current_mode = DEFAULT_MODE;
 
 // ===================================================
 
-void setCurrentMode(ModuleState mode);
+void setCurrentMode(SystemMode mode);
 void btnCheck();
 void pumpStaring();
 void pumpGuard();
 void startPumpByTimer();
 void levelSensorGuard();
+void ledGuard();
 
 // ===================================================
 
-void setCurrentMode(ModuleState mode)
+void setCurrentMode(SystemMode mode)
 {
   current_mode = mode;
   switch (current_mode)
@@ -166,6 +168,75 @@ void levelSensorGuard()
   }
 }
 
+void check_num(uint8_t &_num, uint8_t &_state)
+{
+  if (++_num >= 10)
+  {
+    _num = 0;
+    _state = !_state;
+  }
+}
+
+void ledGuard()
+{
+  // светодиод питания светится красным только в спящем режиме
+  digitalWrite(PWR_OFF_LED_PIN, (current_mode == STANDBAY_MODE));
+
+  static uint8_t pwr_on_num = 0;
+  static bool to_up = true;
+  // во всех остальных случаях светодиод питания плавно мигает зеленым
+  if (current_mode != STANDBAY_MODE)
+  {
+    pwr_on_num += (to_up) ? 5 : -5;
+    analogWrite(PWR_ON_LED_PIN, pwr_on_num);
+    to_up = (pwr_on_num == 250) ? false
+                                : ((pwr_on_num == 0) ? true : to_up);
+  }
+  else
+  {
+    pwr_on_num = 0;
+    to_up = true;
+    digitalWrite(PWR_ON_LED_PIN, LOW);
+  }
+
+  if (current_mode != STANDBAY_MODE)
+  {
+    // если сработал датчик нижнего уровня, светодиод уровня мигает красным с частотой 1Гц
+    static uint8_t lew_num = 0;
+    static uint8_t lew_state = HIGH;
+    if (current_mode == PUMP_STOP_MODE)
+    {
+      digitalWrite(H_LEVEL_LED_PIN, LOW);
+      if (lew_num == 0)
+      {
+        digitalWrite(L_LEVEL_LED_PIN, lew_state);
+      }
+      check_num(lew_num, lew_state);
+    }
+    else
+    {
+      // если датчик нижнего уровня молчит, смотрим состояние датчика среднего уровня
+      digitalWrite(L_LEVEL_LED_PIN, LOW);
+      // если датчик среднего уровня сработал, светодиод уровня мигает зеленым с частотой 1Гц
+      if (!digitalRead(H_LEVEL_SENSOR_PIN))
+      {
+        if (lew_num == 0)
+        {
+          digitalWrite(H_LEVEL_LED_PIN, lew_state);
+        }
+        check_num(lew_num, lew_state);
+      }
+      else
+      {
+        // иначе светодиод уровня горит зеленым
+        digitalWrite(H_LEVEL_LED_PIN, HIGH);
+        lew_num = 0;
+        lew_state = HIGH;
+      }
+    }
+  }
+}
+
 // ===================================================
 
 void setup()
@@ -190,6 +261,7 @@ void setup()
   level_sensor_guard = tasks.addTask(5ul, levelSensorGuard);
   pump_guard = tasks.addTask(5ul, pumpGuard);
   start_pump_by_timer = tasks.addTask(1800000ul, startPumpByTimer);
+  led_guard = tasks.addTask(50ul, ledGuard);
 }
 
 void loop()
