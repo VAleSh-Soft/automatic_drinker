@@ -31,11 +31,12 @@ enum ModuleState
 shButton btn(BTN_PIN);
 shButton pir(PIR_SENSOR_PIN); // датчик движения обрабатываем как обычную кнопку
 
-shTaskManager tasks(3);
+shTaskManager tasks(4);
 
 shHandle pump_starting;       // включение режима работы помпы на пять минут
 shHandle pump_guard;          // собственно, отслеживание необхоимости работы помпы
 shHandle start_pump_by_timer; // периодическое включение режима работы помпы на пять минут
+shHandle level_sensor_guard;  // отслеживание датчика низкого уровня воды
 
 ModuleState current_mode = DEFAULT_MODE;
 
@@ -46,6 +47,7 @@ void btnCheck();
 void pumpStaring();
 void pumpGuard();
 void startPumpByTimer();
+void levelSensorGuard();
 
 // ===================================================
 
@@ -152,6 +154,18 @@ void startPumpByTimer()
   }
 }
 
+void levelSensorGuard()
+{
+  if (digitalRead(L_LEVEL_SENSOR_PIN) == HIGH)
+  {
+    setCurrentMode(PUMP_STOP_MODE);
+  }
+  else
+  {
+    setCurrentMode(DEFAULT_MODE);
+  }
+}
+
 // ===================================================
 
 void setup()
@@ -173,6 +187,7 @@ void setup()
   // ===================================================
 
   pump_starting = tasks.addTask(300000ul, pumpStaring, false);
+  level_sensor_guard = tasks.addTask(5ul, levelSensorGuard);
   pump_guard = tasks.addTask(5ul, pumpGuard);
   start_pump_by_timer = tasks.addTask(1800000ul, startPumpByTimer);
 }
