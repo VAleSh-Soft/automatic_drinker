@@ -168,12 +168,11 @@ void levelSensorGuard()
   }
 }
 
-void check_num(uint8_t &_num, uint8_t &_state)
+void check_num(uint8_t &_num)
 {
-  if (++_num >= 10)
+  if (++_num >= 20)
   {
     _num = 0;
-    _state = !_state;
   }
 }
 
@@ -203,15 +202,11 @@ void ledGuard()
   {
     // если сработал датчик нижнего уровня, светодиод уровня мигает красным с частотой 1Гц
     static uint8_t lew_num = 0;
-    static uint8_t lew_state = HIGH;
     if (current_mode == PUMP_STOP_MODE)
     {
       digitalWrite(H_LEVEL_LED_PIN, LOW);
-      if (lew_num == 0)
-      {
-        digitalWrite(L_LEVEL_LED_PIN, lew_state);
-      }
-      check_num(lew_num, lew_state);
+      digitalWrite(L_LEVEL_LED_PIN, (lew_num < 10));
+      check_num(lew_num);
     }
     else
     {
@@ -220,18 +215,14 @@ void ledGuard()
       // если датчик среднего уровня сработал, светодиод уровня мигает зеленым с частотой 1Гц
       if (!digitalRead(H_LEVEL_SENSOR_PIN))
       {
-        if (lew_num == 0)
-        {
-          digitalWrite(H_LEVEL_LED_PIN, lew_state);
-        }
-        check_num(lew_num, lew_state);
+        digitalWrite(H_LEVEL_LED_PIN, (lew_num < 10));
+        check_num(lew_num);
       }
       else
       {
         // иначе светодиод уровня горит зеленым
         digitalWrite(H_LEVEL_LED_PIN, HIGH);
         lew_num = 0;
-        lew_state = HIGH;
       }
     }
   }
