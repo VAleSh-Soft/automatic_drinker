@@ -18,6 +18,7 @@
 #define PWR_OFF_LED_PIN 7 // пин светодиода питания (красный)
 
 #define PIR_SENSOR_RESPONSE_LEWEL 1 // уровень при срабатывании pir-датчика; может быть 1 (HIGN) или 0 (LOW)
+#define PUMP_CONTROL_LEWLEL 1       // управляющий уровень помпы; может быть 1 (HIGN) или 0 (LOW)
 
 // ===================================================
 
@@ -149,12 +150,18 @@ void pumpGuard()
     pump_state = tasks.getTaskState(pump_starting);
     break;
   case CONTINOUS_MODE:
-    pump_state = true;
+    pump_state = HIGH;
     break;
   default:
-    pump_state = false;
+    pump_state = LOW;
     break;
   }
+  
+  if (!PUMP_CONTROL_LEWLEL)
+  {
+    pump_state = !pump_state;
+  }
+
   digitalWrite(PUMP_PIN, pump_state);
 }
 
