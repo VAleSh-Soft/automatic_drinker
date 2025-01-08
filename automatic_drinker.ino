@@ -3,18 +3,21 @@
 
 // ===================================================
 
-#define BTN_PIN 2
-#define BUZZER_PIN A0
-#define MOTOR_PIN 10
+#define BTN_PIN 2     // пин для подключения кнопки
+#define BUZZER_PIN A0 // пин для подключения пищалки
+#define PUMP_PIN 10   // пин для подключения помпы
 
-#define L_LEVEL_SENSOR_PIN A2
-#define H_LEVEL_SENSOR_PIN A1
-#define PIR_SENSOR_PIN A3
+#define L_LEVEL_SENSOR_PIN A2 // пин датчика низкого уровня воды
+#define H_LEVEL_SENSOR_PIN A1 // пин датчика высокого уровня воды
+#define PIR_SENSOR_PIN A3     // пин датчика движения
 
-#define L_LEVEL_LED_PIN 3
-#define H_LEVEL_LED_PIN 5
-#define PWR_ON_LED_PIN 9
-#define PWR_OFF_LED_PIN 7
+#define L_LEVEL_LED_PIN 3 // пин светодиода низкого уровня воды (красный)
+#define H_LEVEL_LED_PIN 5 // пин светодиода высокого уровня воды (зеленый)
+
+#define PWR_ON_LED_PIN 9  // пин светодиода питания (зеленый)
+#define PWR_OFF_LED_PIN 7 // пин светодиода питания (красный)
+
+#define PIR_SENSOR_RESPONSE_LEWEL 1 // уровень при срабатывании pir-датчика; может быть 1 (HIGN) или 0 (LOW)
 
 // ===================================================
 
@@ -29,7 +32,14 @@ enum SystemMode
 // ===================================================
 
 shButton btn(BTN_PIN);
-shButton pir(PIR_SENSOR_PIN); // датчик движения обрабатываем как обычную кнопку
+
+#if PIR_SENSOR_RESPONSE_LEWEL
+// датчик движения обрабатываем как обычную кнопку
+shButton pir(PIR_SENSOR_PIN, PULL_DOWN);
+#else
+// датчик движения обрабатываем как обычную кнопку
+shButton pir(PIR_SENSOR_PIN);
+#endif
 
 shTaskManager tasks(5);
 
@@ -145,7 +155,7 @@ void pumpGuard()
     pump_state = false;
     break;
   }
-  digitalWrite(MOTOR_PIN, pump_state);
+  digitalWrite(PUMP_PIN, pump_state);
 }
 
 void startPumpByTimer()
@@ -237,8 +247,7 @@ void setup()
 
   // ===================================================
 
-  pinMode(BUZZER_PIN, OUTPUT);
-  pinMode(MOTOR_PIN, OUTPUT);
+  pinMode(PUMP_PIN, OUTPUT);
   pinMode(L_LEVEL_LED_PIN, OUTPUT);
   pinMode(H_LEVEL_LED_PIN, OUTPUT);
   pinMode(PWR_ON_LED_PIN, OUTPUT);
