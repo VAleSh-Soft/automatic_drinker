@@ -17,8 +17,11 @@
 #define PWR_ON_LED_PIN 9  // пин светодиода питания (зеленый)
 #define PWR_OFF_LED_PIN 7 // пин светодиода питания (красный)
 
-#define PIR_SENSOR_RESPONSE_LEWEL 1 // уровень при срабатывании pir-датчика; может быть 1 (HIGN) или 0 (LOW)
-#define PUMP_CONTROL_LEWLEL 1       // управляющий уровень помпы; может быть 1 (HIGN) или 0 (LOW)
+// уровни срабатывания датчиков и управляющие уровни выходов; могут быть 1 (HIGN) или 0 (LOW)
+#define PIR_SENSOR_RESPONSE_LEWEL 1 // уровень при срабатывании pir-датчика;
+#define PUMP_CONTROL_LEWLEL 1       // управляющий уровень помпы;
+#define L_SENSOR_RESPONSE_LEWEL 1   // уровень при срабатывании датчика низкого уровня воды;
+#define H_SENSOR_RESPONSE_LEWEL 1   // уровень при срабатывании датчика высокого уровня воды;
 
 // ===================================================
 
@@ -156,7 +159,7 @@ void pumpGuard()
     pump_state = LOW;
     break;
   }
-  
+
   if (!PUMP_CONTROL_LEWLEL)
   {
     pump_state = !pump_state;
@@ -175,7 +178,7 @@ void startPumpByTimer()
 
 void levelSensorGuard()
 {
-  if (digitalRead(L_LEVEL_SENSOR_PIN) == HIGH)
+  if (digitalRead(L_LEVEL_SENSOR_PIN) == L_SENSOR_RESPONSE_LEWEL)
   {
     setCurrentMode(PUMP_STOP_MODE);
   }
@@ -230,7 +233,7 @@ void ledGuard()
       // если датчик нижнего уровня молчит, смотрим состояние датчика среднего уровня
       digitalWrite(L_LEVEL_LED_PIN, LOW);
       // если датчик среднего уровня сработал, светодиод уровня мигает зеленым с частотой 1Гц
-      if (!digitalRead(H_LEVEL_SENSOR_PIN))
+      if (digitalRead(H_LEVEL_SENSOR_PIN) == H_SENSOR_RESPONSE_LEWEL)
       {
         digitalWrite(H_LEVEL_LED_PIN, (lew_num < 10));
         check_num(lew_num);
@@ -259,8 +262,19 @@ void setup()
   pinMode(H_LEVEL_LED_PIN, OUTPUT);
   pinMode(PWR_ON_LED_PIN, OUTPUT);
   pinMode(PWR_OFF_LED_PIN, OUTPUT);
+
+#if L_SENSOR_RESPONSE_LEWEL
+  // желательно обеспечить подтяжку к GND
   pinMode(L_LEVEL_SENSOR_PIN, INPUT);
+#else
+  pinMode(L_LEVEL_SENSOR_PIN, INPUT_PULLUP);
+#endif
+#if L_SENSOR_RESPONSE_LEWEL
+  // желательно обеспечить подтяжку к GND
   pinMode(H_LEVEL_SENSOR_PIN, INPUT);
+#else
+  pinMode(H_LEVEL_SENSOR_PIN, INPUT_PULLUP);
+#endif
 
   // ===================================================
 
