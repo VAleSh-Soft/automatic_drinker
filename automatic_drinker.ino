@@ -1,3 +1,4 @@
+#include <EEPROM.h>
 #include <shButton.h>
 #include <shTaskManager.h>
 
@@ -11,17 +12,19 @@
 #define H_LEVEL_SENSOR_PIN A1 // пин датчика высокого уровня воды
 #define PIR_SENSOR_PIN A3     // пин датчика движения
 
-#define L_LEVEL_LED_PIN 3 // пин светодиода низкого уровня воды (красный)
-#define H_LEVEL_LED_PIN 5 // пин светодиода высокого уровня воды (зеленый)
+#define L_LEVEL_LED_PIN 6 // пин светодиода низкого уровня воды (красный)
+#define H_LEVEL_LED_PIN 7 // пин светодиода высокого уровня воды (зеленый)
 
+#define PWR_OFF_LED_PIN 8 // пин светодиода питания (красный)
 #define PWR_ON_LED_PIN 9  // пин светодиода питания (зеленый)
-#define PWR_OFF_LED_PIN 7 // пин светодиода питания (красный)
 
 // уровни срабатывания датчиков и управляющие уровни выходов; могут быть 1 (HIGN) или 0 (LOW)
 #define PIR_SENSOR_RESPONSE_LEWEL 1 // уровень при срабатывании pir-датчика;
 #define PUMP_CONTROL_LEWLEL 1       // управляющий уровень помпы;
-#define L_SENSOR_RESPONSE_LEWEL 1   // уровень при срабатывании датчика низкого уровня воды;
-#define H_SENSOR_RESPONSE_LEWEL 1   // уровень при срабатывании датчика высокого уровня воды;
+#define L_SENSOR_RESPONSE_LEWEL 1   // уровень при срабатывании датчика низкого уровня воды (вода ниже датчика);
+#define H_SENSOR_RESPONSE_LEWEL 1   // уровень при срабатывании датчика высокого уровня воды (вода ниже датчик;
+
+#define EEPROM_INDEX_FOR_CUR_MODE 10 // индекс в EEPROM для сохранения текущего режима (1 байт)
 
 // ===================================================
 
@@ -85,6 +88,11 @@ void setCurrentMode(SystemMode mode)
   case PUMP_STOP_MODE:
     tasks.stopTask(start_pump_by_timer);
     break;
+  }
+
+  if (current_mode != PUMP_STOP_MODE)
+  {
+    EEPROM.update(EEPROM_INDEX_FOR_CUR_MODE, current_mode);
   }
 }
 
@@ -275,6 +283,14 @@ void setup()
 #else
   pinMode(H_LEVEL_SENSOR_PIN, INPUT_PULLUP);
 #endif
+
+  // ===================================================
+
+  current_mode = (SystemMode)EEPROM.read(EEPROM_INDEX_FOR_CUR_MODE);
+  if (current_mode > STANDBAY_MODE)
+  {
+    setCurrentMode(DEFAULT_MODE);
+  }
 
   // ===================================================
 
