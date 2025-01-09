@@ -211,13 +211,21 @@ void ledGuard()
 
   static uint8_t pwr_on_num = 0;
   static bool to_up = true;
-  // во всех остальных случаях светодиод питания плавно мигает зеленым
+  /* в остальных случаях он либо светится зеленым непрерывно (режим постоянно
+     включенной помпы), либо плавно мигает зеленым */
   if (current_mode != STANDBAY_MODE)
   {
-    pwr_on_num += (to_up) ? 5 : -5;
-    analogWrite(PWR_ON_LED_PIN, pwr_on_num);
-    to_up = (pwr_on_num == 250) ? false
-                                : ((pwr_on_num == 0) ? true : to_up);
+    if (current_mode == CONTINOUS_MODE)
+    {
+      digitalWrite(PWR_ON_LED_PIN, HIGH);
+    }
+    else
+    {
+      pwr_on_num += (to_up) ? 5 : -5;
+      analogWrite(PWR_ON_LED_PIN, pwr_on_num);
+      to_up = (pwr_on_num == 250) ? false
+                                  : ((pwr_on_num == 0) ? true : to_up);
+    }
   }
   else
   {
