@@ -19,12 +19,16 @@
 #define PWR_ON_LED_PIN 9  // пин светодиода питания (зеленый)
 
 // уровни срабатывания датчиков и управляющие уровни выходов; могут быть 1 (HIGN) или 0 (LOW)
-#define PIR_SENSOR_RESPONSE_LEWEL 1 // уровень при срабатывании pir-датчика;
+#define PIR_SENSOR_RESPONSE_LEWEL 1 // логический уровень при срабатывании pir-датчика;
 #define PUMP_CONTROL_LEWLEL 1       // управляющий уровень помпы;
-#define L_SENSOR_RESPONSE_LEWEL 1   // уровень при срабатывании датчика низкого уровня воды (вода ниже датчика);
-#define H_SENSOR_RESPONSE_LEWEL 1   // уровень при срабатывании датчика высокого уровня воды (вода ниже датчик;
+
+#define L_SENSOR_RESPONSE_LEWEL 1   // логический уровень при срабатывании датчика низкого уровня воды (вода ниже датчика);
+#define H_SENSOR_RESPONSE_LEWEL 1   // логический уровень при срабатывании датчика высокого уровня воды (вода ниже датчик;
 
 #define EEPROM_INDEX_FOR_CUR_MODE 10 // индекс в EEPROM для сохранения текущего режима (1 байт)
+
+#define PUMP_OPERATING_TIME 300      // время работы помпы в секундах
+#define PUMP_AUTOSTART_INTERVAL 1800 // интервал включения помпы по таймеру в секундах
 
 // ===================================================
 
@@ -52,7 +56,7 @@ shTaskManager tasks(5);
 
 shHandle pump_starting;       // включение режима работы помпы на пять минут
 shHandle pump_guard;          // собственно, отслеживание необходимости работы помпы
-shHandle start_pump_by_timer; // периодическое включение режима работы помпы на пять минут
+shHandle start_pump_by_timer; // периодическое включение помпы по таймеру
 shHandle level_sensor_guard;  // отслеживание датчика низкого уровня воды
 shHandle led_guard;           // управление светодиодами
 
@@ -167,7 +171,7 @@ void pumpGuard()
     pump_state = LOW;
     break;
   }
-// TODO при низком уровне воды кроме того включать пищалку
+  // TODO при низком уровне воды кроме того включать пищалку
   if (!PUMP_CONTROL_LEWLEL)
   {
     pump_state = !pump_state;
@@ -302,10 +306,10 @@ void setup()
 
   // ===================================================
 
-  pump_starting = tasks.addTask(300000ul, pumpStaring, false);
+  pump_starting = tasks.addTask(PUMP_OPERATING_TIME * 1000ul, pumpStaring, false);
   level_sensor_guard = tasks.addTask(5ul, levelSensorGuard);
   pump_guard = tasks.addTask(5ul, pumpGuard);
-  start_pump_by_timer = tasks.addTask(1800000ul, startPumpByTimer);
+  start_pump_by_timer = tasks.addTask(PUMP_AUTOSTART_INTERVAL * 1000ul, startPumpByTimer);
   led_guard = tasks.addTask(50ul, ledGuard);
 }
 
