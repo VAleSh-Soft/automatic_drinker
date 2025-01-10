@@ -6,19 +6,18 @@
             "compilerPath": "/home/vladimir/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/avr-g++",
             "compilerArgs": [
                 "-w",
-                "-std=gnu++11",
+                "-std=gnu++17",
                 "-fpermissive",
                 "-fno-exceptions",
                 "-ffunction-sections",
                 "-fdata-sections",
-                "-fno-threadsafe-statics",
-                "-Wno-error=narrowing"
+                "-fno-threadsafe-statics"
             ],
             "intelliSenseMode": "gcc-x64",
             "includePath": [
-                "/home/vladimir/.arduino15/packages/arduino/hardware/avr/1.8.6/cores/arduino",
-                "/home/vladimir/.arduino15/packages/arduino/hardware/avr/1.8.6/variants/eightanaloginputs",
-                "/home/vladimir/.arduino15/packages/arduino/hardware/avr/1.8.6/libraries/EEPROM/src",
+                "/home/vladimir/.arduino15/packages/MiniCore/hardware/avr/3.0.2/cores/MCUdude_corefiles",
+                "/home/vladimir/.arduino15/packages/MiniCore/hardware/avr/3.0.2/variants/standard",
+                "/home/vladimir/.arduino15/packages/MiniCore/hardware/avr/3.0.2/libraries/EEPROM/src",
                 "/mnt/B6F0D77CF0D74173/_Documents/Vladimir/YandexDisk/Arduino/libraries/shButton",
                 "/mnt/B6F0D77CF0D74173/_Documents/Vladimir/YandexDisk/Arduino/libraries/shTaskManager",
                 "/home/vladimir/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/lib/gcc/avr/7.3.0/include",
@@ -26,14 +25,14 @@
                 "/home/vladimir/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include"
             ],
             "forcedInclude": [
-                "/home/vladimir/.arduino15/packages/arduino/hardware/avr/1.8.6/cores/arduino/Arduino.h"
+                "/home/vladimir/.arduino15/packages/MiniCore/hardware/avr/3.0.2/cores/MCUdude_corefiles/Arduino.h"
             ],
             "cStandard": "c11",
-            "cppStandard": "c++11",
+            "cppStandard": "c++17",
             "defines": [
                 "F_CPU=16000000L",
                 "ARDUINO=10607",
-                "ARDUINO_AVR_NANO",
+                "ARDUINO_AVR_ATmega168",
                 "ARDUINO_ARCH_AVR",
                 "__DBL_MIN_EXP__=(-125)",
                 "__HQ_FBIT__=15",

@@ -30,7 +30,7 @@
 
 enum SystemMode
 {
-  DEFAULT_MODE,   // дефолтный режим работы
+  DEFAULT_MODE,   // автоматический режим работы
   CONTINOUS_MODE, // режим непрерывной работы помпы
   STANDBAY_MODE,  // спящий режим
   PUMP_STOP_MODE  // режим остановки помпы из-за низкого уровня воды
@@ -101,7 +101,7 @@ void btnCheck()
   switch (btn.getButtonState())
   {
   case BTN_LONGCLICK:
-    // длинный клик - переключает дефолтный и спящий режимы
+    // длинный клик - переключает автоматический и спящий режимы
     (current_mode != STANDBAY_MODE) ? setCurrentMode(STANDBAY_MODE)
                                     : setCurrentMode(DEFAULT_MODE);
     break;
@@ -110,17 +110,17 @@ void btnCheck()
     switch (current_mode)
     {
     case DEFAULT_MODE:
-      // в дефолтном режиме включает помпу на пять минут, если она выключена, и наоборот
+      // в автоматическом режиме включает помпу на пять минут, если она выключена, и наоборот
       pumpStaring();
       break;
     default:
-      // во всех остальных случаях переводит его в дефолтный режим
+      // во всех остальных случаях переводит его в автоматический режим
       setCurrentMode(DEFAULT_MODE);
       break;
     }
     break;
   case BTN_DBLCLICK:
-    // двойной клик в дефолтном режиме включает непрерывный режим
+    // двойной клик в автоматическом режиме включает непрерывный режим
     if (current_mode == DEFAULT_MODE)
     {
       setCurrentMode(CONTINOUS_MODE);
@@ -167,7 +167,7 @@ void pumpGuard()
     pump_state = LOW;
     break;
   }
-
+// TODO при низком уровне воды кроме того включать пищалку
   if (!PUMP_CONTROL_LEWLEL)
   {
     pump_state = !pump_state;
