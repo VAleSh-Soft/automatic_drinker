@@ -198,7 +198,7 @@ void btnCheck()
   {
   case BTN_DOWN:
     AD_PRINTLN(F("Pir sensor triggered"));
-    if (current_mode == DEFAULT_MODE)
+    if (current_mode == DEFAULT_MODE && !tasks.getTaskState(pump_starting))
     {
       pumpStaring();
     }
@@ -217,6 +217,7 @@ void pumpStaring()
   {
     AD_PRINTLN(F("Pump stopped"));
     tasks.stopTask(pump_starting);
+    // перезапускаем таймер периодического включения помпы
     tasks.startTask(start_pump_by_timer);
   }
 }
