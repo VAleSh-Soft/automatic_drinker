@@ -40,6 +40,18 @@
 #define PUMP_OPERATING_TIME 300      // время работы помпы в секундах
 #define PUMP_AUTOSTART_INTERVAL 1800 // интервал включения помпы по таймеру в секундах
 
+#define LOG_ON 1 // включить вывод в сериал
+
+// ===================================================
+
+#if LOG_ON
+#define AD_PRINTLN(x) Serial.println(x)
+#define AD_PRINT(x) Serial.print(x)
+#else
+#define AD_PRINTLN(x)
+#define AD_PRINT(x)
+#endif
+
 // ===================================================
 
 enum SystemMode
@@ -74,18 +86,25 @@ SystemMode current_mode = DEFAULT_MODE;
 // ===================================================
 
 void setCurrentMode(SystemMode mode);
+void restoreCurrentMode();
 void btnCheck();
 void pumpStaring();
 void pumpGuard();
 void startPumpByTimer();
 void levelSensorGuard();
 void ledGuard();
+#if LOG_ON
+void printCurrentMode();
+#endif
 
 // ===================================================
 
 void setCurrentMode(SystemMode mode)
 {
   current_mode = mode;
+#if LOG_ON
+  printCurrentMode();
+#endif
   switch (current_mode)
   {
   case DEFAULT_MODE:
@@ -93,6 +112,7 @@ void setCurrentMode(SystemMode mode)
     tasks.stopTask(pump_starting);
     break;
   case CONTINOUS_MODE:
+    AD_PRINTLN(F("Pump turns on constantly"));
     tasks.stopTask(start_pump_by_timer);
     break;
   case STANDBAY_MODE:
@@ -103,10 +123,22 @@ void setCurrentMode(SystemMode mode)
     break;
   }
 
-  if (current_mode != PUMP_STOP_MODE)
+  if (current_mode < (uint8_t)STANDBAY_MODE)
   {
     EEPROM.update(EEPROM_INDEX_FOR_CUR_MODE, current_mode);
   }
+}
+
+void restoreCurrentMode()
+{
+  current_mode = (SystemMode)EEPROM.read(EEPROM_INDEX_FOR_CUR_MODE);
+  if (current_mode > (uint8_t)STANDBAY_MODE)
+  {
+    setCurrentMode(DEFAULT_MODE);
+  }
+#if LOG_ON
+  printCurrentMode();
+#endif
 }
 
 void btnCheck()
@@ -114,17 +146,37 @@ void btnCheck()
   switch (btn.getButtonState())
   {
   case BTN_LONGCLICK:
-    // длинный клик - переключает автоматический и спящий режимы
-    (current_mode != STANDBAY_MODE) ? setCurrentMode(STANDBAY_MODE)
-                                    : setCurrentMode(DEFAULT_MODE);
+    AD_PRINTLN(F("Button - long click"));
+    // длинный клик - включает спящий режимы
+    if (current_mode != STANDBAY_MODE)
+    {
+      setCurrentMode(STANDBAY_MODE);
+    }
+    else
+    // или, если модуль был в спящем режиме - восстанавливает прежний режим
+    {
+      restoreCurrentMode();
+    }
     break;
   case BTN_ONECLICK:
+    AD_PRINTLN(F("Button - one click"));
     // одиночный клик
     switch (current_mode)
     {
     case DEFAULT_MODE:
       // в автоматическом режиме включает помпу на пять минут, если она выключена, и наоборот
       pumpStaring();
+      break;
+    case PUMP_STOP_MODE:
+      // если помпа была остановлена по датчику низкого уровня воды, то восстановить прежний режим работы
+      if (digitalRead(L_LEVEL_SENSOR_PIN) != L_SENSOR_RESPONSE_LEWEL)
+      {
+        restoreCurrentMode();
+      }
+      break;
+    case STANDBAY_MODE:
+      // при выходе из спящего режима восстановить прежний режим работы
+      restoreCurrentMode();
       break;
     default:
       // во всех остальных случаях переводит его в автоматический режим
@@ -133,6 +185,7 @@ void btnCheck()
     }
     break;
   case BTN_DBLCLICK:
+    AD_PRINTLN(F("Button - double click"));
     // двойной клик в автоматическом режиме включает непрерывный режим
     if (current_mode == DEFAULT_MODE)
     {
@@ -144,6 +197,7 @@ void btnCheck()
   switch (pir.getButtonState())
   {
   case BTN_DOWN:
+    AD_PRINTLN(F("Pir sensor triggered"));
     if (current_mode == DEFAULT_MODE)
     {
       pumpStaring();
@@ -156,10 +210,12 @@ void pumpStaring()
 {
   if (!tasks.getTaskState(pump_starting))
   {
+    AD_PRINTLN(F("Pump starting"));
     tasks.startTask(pump_starting);
   }
   else
   {
+    AD_PRINTLN(F("Pump stopped"));
     tasks.stopTask(pump_starting);
     tasks.startTask(start_pump_by_timer);
   }
@@ -193,6 +249,7 @@ void startPumpByTimer()
 {
   if (current_mode == DEFAULT_MODE && !tasks.getTaskState(pump_starting))
   {
+    AD_PRINTLN(F("Pump starting on a timer"));
     tasks.startTask(pump_starting);
   }
 }
@@ -201,11 +258,8 @@ void levelSensorGuard()
 {
   if (digitalRead(L_LEVEL_SENSOR_PIN) == L_SENSOR_RESPONSE_LEWEL)
   {
+    AD_PRINTLN(F("Level sensor triggered"));
     setCurrentMode(PUMP_STOP_MODE);
-  }
-  else
-  {
-    setCurrentMode(DEFAULT_MODE);
   }
 }
 
@@ -275,13 +329,46 @@ void ledGuard()
       }
     }
   }
+  else
+  {
+    digitalWrite(H_LEVEL_LED_PIN, LOW);
+    digitalWrite(L_LEVEL_LED_PIN, LOW);
+  }
 }
+
+#if LOG_ON
+
+void printCurrentMode()
+{
+  AD_PRINT(F("Current mode = "));
+  switch (current_mode)
+  {
+  case DEFAULT_MODE:
+    AD_PRINTLN(F("default"));
+    break;
+  case CONTINOUS_MODE:
+    AD_PRINTLN(F("continuous"));
+    break;
+  case STANDBAY_MODE:
+    AD_PRINTLN(F("standby"));
+    break;
+  case PUMP_STOP_MODE:
+    AD_PRINTLN(F("pump stopped"));
+    break;
+  }
+}
+#endif
 
 // ===================================================
 
 void setup()
 {
+#if LOG_ON
+  Serial.begin(115200);
+#endif
+
   btn.setVirtualClickOn();
+  btn.setLongClickMode(LCM_ONLYONCE);
   pir.setTimeoutOfDebounce(0);
 
   // ===================================================
@@ -308,11 +395,7 @@ void setup()
 
   // ===================================================
 
-  current_mode = (SystemMode)EEPROM.read(EEPROM_INDEX_FOR_CUR_MODE);
-  if (current_mode > STANDBAY_MODE)
-  {
-    setCurrentMode(DEFAULT_MODE);
-  }
+  restoreCurrentMode();
 
   // ===================================================
 

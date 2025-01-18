@@ -2,5 +2,6 @@
     "configuration": "bootloader=no_bootloader,eeprom=keep,baudrate=default,variant=modelP,BOD=2v7,LTO=Os_flto,clock=16MHz_external",
     "board": "MiniCore:avr:168",
     "sketch": "automatic_drinker.ino",
-    "output": "_build"
+    "output": "_build",
+    "port": "/dev/ttyUSB0"
 }
