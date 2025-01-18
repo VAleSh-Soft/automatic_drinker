@@ -212,6 +212,7 @@ void pumpStaring()
   {
     AD_PRINTLN(F("Pump starting"));
     tasks.startTask(pump_starting);
+    tasks.stopTask(start_pump_by_timer);
   }
   else
   {
@@ -251,7 +252,7 @@ void startPumpByTimer()
   if (current_mode == DEFAULT_MODE && !tasks.getTaskState(pump_starting))
   {
     AD_PRINTLN(F("Pump starting on a timer"));
-    tasks.startTask(pump_starting);
+    pumpStaring();
   }
 }
 
