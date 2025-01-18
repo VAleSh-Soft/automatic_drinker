@@ -4,6 +4,8 @@
 
 // ===================================================
 
+// настройка пинов для подключения периферии
+
 #define BTN_PIN 2     // пин для подключения кнопки
 #define BUZZER_PIN A0 // пин для подключения пищалки
 #define PUMP_PIN 10   // пин для подключения помпы
@@ -18,12 +20,20 @@
 #define PWR_OFF_LED_PIN 8 // пин светодиода питания (красный)
 #define PWR_ON_LED_PIN 9  // пин светодиода питания (зеленый)
 
-// уровни срабатывания датчиков и управляющие уровни выходов; могут быть 1 (HIGN) или 0 (LOW)
-#define PIR_SENSOR_RESPONSE_LEWEL 1 // логический уровень при срабатывании pir-датчика;
-#define PUMP_CONTROL_LEWLEL 1       // управляющий уровень помпы;
+// ===================================================
 
-#define L_SENSOR_RESPONSE_LEWEL 1   // логический уровень при срабатывании датчика низкого уровня воды (вода ниже датчика);
-#define H_SENSOR_RESPONSE_LEWEL 1   // логический уровень при срабатывании датчика высокого уровня воды (вода ниже датчик;
+// уровни срабатывания датчиков и управляющие уровни выходов;
+// могут быть 1 (HIGN) или 0 (LOW)
+
+#define PUMP_CONTROL_LEWLEL 1 // управляющий уровень помпы;
+
+#define PIR_SENSOR_RESPONSE_LEWEL 1 // логический уровень при срабатывании pir-датчика;
+#define L_SENSOR_RESPONSE_LEWEL 0   // логический уровень при срабатывании датчика низкого уровня воды (вода ниже датчика);
+#define H_SENSOR_RESPONSE_LEWEL 0   // логический уровень при срабатывании датчика высокого уровня воды (вода ниже датчик;
+
+// ===================================================
+
+// прочие настройки
 
 #define EEPROM_INDEX_FOR_CUR_MODE 10 // индекс в EEPROM для сохранения текущего режима (1 байт)
 
@@ -44,12 +54,11 @@ enum SystemMode
 
 shButton btn(BTN_PIN);
 
-#if PIR_SENSOR_RESPONSE_LEWEL
 // датчик движения обрабатываем как обычную кнопку
-shButton pir(PIR_SENSOR_PIN, PULL_DOWN);
-#else
-// датчик движения обрабатываем как обычную кнопку
+#if PIR_SENSOR_RESPONSE_LEWEL == 0
 shButton pir(PIR_SENSOR_PIN);
+#else
+shButton pir(PIR_SENSOR_PIN, PULL_DOWN);
 #endif
 
 shTaskManager tasks(5);
@@ -277,23 +286,24 @@ void setup()
 
   // ===================================================
 
+  digitalWrite(PUMP_PIN, !PUMP_CONTROL_LEWLEL);
   pinMode(PUMP_PIN, OUTPUT);
   pinMode(L_LEVEL_LED_PIN, OUTPUT);
   pinMode(H_LEVEL_LED_PIN, OUTPUT);
   pinMode(PWR_ON_LED_PIN, OUTPUT);
   pinMode(PWR_OFF_LED_PIN, OUTPUT);
 
-#if L_SENSOR_RESPONSE_LEWEL
-  // желательно обеспечить подтяжку к GND
-  pinMode(L_LEVEL_SENSOR_PIN, INPUT);
-#else
+#if L_SENSOR_RESPONSE_LEWEL == 0
   pinMode(L_LEVEL_SENSOR_PIN, INPUT_PULLUP);
-#endif
-#if L_SENSOR_RESPONSE_LEWEL
-  // желательно обеспечить подтяжку к GND
-  pinMode(H_LEVEL_SENSOR_PIN, INPUT);
 #else
+  // нужно обеспечить подтяжку пина к GND
+  pinMode(L_LEVEL_SENSOR_PIN, INPUT);
+#endif
+#if H_SENSOR_RESPONSE_LEWEL == 0
   pinMode(H_LEVEL_SENSOR_PIN, INPUT_PULLUP);
+#else
+  // нужно обеспечить подтяжку пина к GND
+  pinMode(H_LEVEL_SENSOR_PIN, INPUT);
 #endif
 
   // ===================================================
