@@ -42,6 +42,8 @@
 
 #define LOG_ON 1 // включить вывод в сериал
 
+#define USE_BUZZER_WHEN_STARTING_PUMP 1 // использовать пищалку при включении помпы
+
 // ===================================================
 
 #if LOG_ON
@@ -113,6 +115,9 @@ void setCurrentMode(SystemMode mode)
     break;
   case CONTINOUS_MODE:
     AD_PRINTLN(F("Pump turns on constantly"));
+#if USE_BUZZER_WHEN_STARTING_PUMP
+    tone(BUZZER_PIN, 2500, 20);
+#endif
     tasks.stopTask(start_pump_by_timer);
     break;
   case STANDBAY_MODE:
@@ -211,6 +216,9 @@ void pumpStaring()
   if (!tasks.getTaskState(pump_starting))
   {
     AD_PRINTLN(F("Pump starting"));
+#if USE_BUZZER_WHEN_STARTING_PUMP
+    tone(BUZZER_PIN, 2500, 20);
+#endif
     tasks.startTask(pump_starting);
     tasks.stopTask(start_pump_by_timer);
   }
