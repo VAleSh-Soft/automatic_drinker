@@ -2,9 +2,19 @@
 #include <shButton.h>
 #include <shTaskManager.h>
 
-// ===================================================
+// ==== настройки ====================================
 
-// настройка пинов для подключения периферии
+#define EEPROM_INDEX_FOR_CUR_MODE 10 // индекс в EEPROM для сохранения текущего режима (1 байт)
+
+#define PUMP_OPERATING_TIME 300      // время работы помпы в секундах
+#define PUMP_AUTOSTART_INTERVAL 1800 // интервал включения помпы по таймеру в секундах
+
+#define LOG_ON 1 // включить вывод в сериал
+
+#define USE_BUZZER_WHEN_STARTING_PUMP 1 // использовать пищалку при включении помпы
+#define USE_H_LEWEL_SENSOR 1            // использовать датчик верхнего уровня воды
+
+// ==== пины для подключения периферии ===============
 
 #define BTN_PIN 2     // пин для подключения кнопки
 #define BUZZER_PIN A0 // пин для подключения пищалки
@@ -20,7 +30,7 @@
 #define PWR_OFF_LED_PIN 8 // пин светодиода питания (красный)
 #define PWR_ON_LED_PIN 9  // пин светодиода питания (зеленый)
 
-// ===================================================
+// ==== управляющие уровни ===========================
 
 // уровни срабатывания датчиков и управляющие уровни выходов;
 // могут быть 1 (HIGN) или 0 (LOW)
@@ -30,19 +40,6 @@
 #define PIR_SENSOR_RESPONSE_LEWEL 1 // логический уровень при срабатывании pir-датчика;
 #define L_SENSOR_RESPONSE_LEWEL 0   // логический уровень при срабатывании датчика низкого уровня воды (вода ниже датчика);
 #define H_SENSOR_RESPONSE_LEWEL 0   // логический уровень при срабатывании датчика высокого уровня воды (вода ниже датчик;
-
-// ===================================================
-
-// прочие настройки
-
-#define EEPROM_INDEX_FOR_CUR_MODE 10 // индекс в EEPROM для сохранения текущего режима (1 байт)
-
-#define PUMP_OPERATING_TIME 300      // время работы помпы в секундах
-#define PUMP_AUTOSTART_INTERVAL 1800 // интервал включения помпы по таймеру в секундах
-
-#define LOG_ON 1 // включить вывод в сериал
-
-#define USE_BUZZER_WHEN_STARTING_PUMP 1 // использовать пищалку при включении помпы
 
 // ===================================================
 
@@ -323,8 +320,9 @@ void ledGuard()
     }
     else
     {
-      // если датчик нижнего уровня молчит, смотрим состояние датчика среднего уровня
       digitalWrite(L_LEVEL_LED_PIN, LOW);
+#if USE_H_LEWEL_SENSOR
+      // если датчик нижнего уровня молчит, смотрим состояние датчика среднего уровня
       // если датчик среднего уровня сработал, светодиод уровня мигает зеленым с частотой 1Гц
       if (digitalRead(H_LEVEL_SENSOR_PIN) == H_SENSOR_RESPONSE_LEWEL)
       {
@@ -335,8 +333,12 @@ void ledGuard()
       {
         // иначе светодиод уровня горит зеленым
         digitalWrite(H_LEVEL_LED_PIN, HIGH);
-        lew_num = 0;
       }
+#else
+        // иначе светодиод уровня горит зеленым
+      digitalWrite(H_LEVEL_LED_PIN, HIGH);
+      lew_num = 0;
+#endif
     }
   }
   else
@@ -396,11 +398,13 @@ void setup()
   // нужно обеспечить подтяжку пина к GND
   pinMode(L_LEVEL_SENSOR_PIN, INPUT);
 #endif
+#if USE_H_LEWEL_SENSOR
 #if H_SENSOR_RESPONSE_LEWEL == 0
   pinMode(H_LEVEL_SENSOR_PIN, INPUT_PULLUP);
 #else
   // нужно обеспечить подтяжку пина к GND
   pinMode(H_LEVEL_SENSOR_PIN, INPUT);
+#endif
 #endif
 
   // ===================================================
