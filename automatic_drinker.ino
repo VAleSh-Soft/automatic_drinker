@@ -12,6 +12,7 @@
 #define LOG_ON 1 // включить вывод в сериал
 
 #define USE_BUZZER_WHEN_STARTING_PUMP 1 // использовать пищалку при включении помпы
+
 #define USE_H_LEWEL_SENSOR 1            // использовать датчик верхнего уровня воды
 
 // ==== пины для подключения периферии ===============
@@ -113,7 +114,7 @@ void setCurrentMode(SystemMode mode)
   case CONTINOUS_MODE:
     AD_PRINTLN(F("Pump turns on constantly"));
 #if USE_BUZZER_WHEN_STARTING_PUMP
-    tone(BUZZER_PIN, 2500, 20);
+    tone(BUZZER_PIN, 2500, 10);
 #endif
     tasks.stopTask(start_pump_by_timer);
     break;
@@ -214,7 +215,7 @@ void pumpStaring()
   {
     AD_PRINTLN(F("Pump starting"));
 #if USE_BUZZER_WHEN_STARTING_PUMP
-    tone(BUZZER_PIN, 2500, 20);
+    tone(BUZZER_PIN, 2500, 10);
 #endif
     tasks.startTask(pump_starting);
     tasks.stopTask(start_pump_by_timer);
@@ -283,19 +284,23 @@ void ledGuard()
   // светодиод питания светится красным только в спящем режиме
   digitalWrite(PWR_OFF_LED_PIN, (current_mode == STANDBAY_MODE));
 
+  static uint8_t blink_num = 0;
   static uint8_t pwr_on_num = 0;
   static bool to_up = true;
-  /* в остальных случаях он либо светится зеленым непрерывно (режим постоянно
-     включенной помпы), либо плавно мигает зеленым */
+
+  /* в остальных случаях он светится зеленым
+     - либо мигает с частотой 1Гц (режим постоянно включенной помпы)
+     - либо мигает плавно в остальных режимах */
   if (current_mode != STANDBAY_MODE)
   {
     if (current_mode == CONTINOUS_MODE)
     {
-      digitalWrite(PWR_ON_LED_PIN, HIGH);
+      digitalWrite(PWR_ON_LED_PIN, (blink_num >= 10));
+      check_num(blink_num);
     }
     else
     {
-      pwr_on_num += (to_up) ? 5 : -5;
+      pwr_on_num += (to_up) ? 10 : -10;
       analogWrite(PWR_ON_LED_PIN, pwr_on_num);
       to_up = (pwr_on_num == 250) ? false
                                   : ((pwr_on_num == 0) ? true : to_up);
@@ -311,23 +316,22 @@ void ledGuard()
   if (current_mode != STANDBAY_MODE)
   {
     // если сработал датчик нижнего уровня, светодиод уровня мигает красным с частотой 1Гц
-    static uint8_t lew_num = 0;
     if (current_mode == PUMP_STOP_MODE)
     {
       digitalWrite(H_LEVEL_LED_PIN, LOW);
-      digitalWrite(L_LEVEL_LED_PIN, (lew_num < 10));
-      check_num(lew_num);
+      digitalWrite(L_LEVEL_LED_PIN, (blink_num < 10));
+      check_num(blink_num);
     }
     else
     {
       digitalWrite(L_LEVEL_LED_PIN, LOW);
 #if USE_H_LEWEL_SENSOR
-      // если датчик нижнего уровня молчит, смотрим состояние датчика среднего уровня
-      // если датчик среднего уровня сработал, светодиод уровня мигает зеленым с частотой 1Гц
+      // если датчик нижнего уровня молчит, смотрим состояние датчика верхнего уровня
+      // если он сработал, светодиод уровня мигает зеленым с частотой 1Гц
       if (digitalRead(H_LEVEL_SENSOR_PIN) == H_SENSOR_RESPONSE_LEWEL)
       {
-        digitalWrite(H_LEVEL_LED_PIN, (lew_num < 10));
-        check_num(lew_num);
+        digitalWrite(H_LEVEL_LED_PIN, (blink_num < 10));
+        check_num(blink_num);
       }
       else
       {
@@ -335,9 +339,8 @@ void ledGuard()
         digitalWrite(H_LEVEL_LED_PIN, HIGH);
       }
 #else
-        // иначе светодиод уровня горит зеленым
+      // иначе светодиод уровня горит зеленым
       digitalWrite(H_LEVEL_LED_PIN, HIGH);
-      lew_num = 0;
 #endif
     }
   }
