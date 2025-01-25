@@ -6,28 +6,32 @@
 
 constexpr uint32_t PUMP_OPERATING_TIME = 300; // время работы помпы, секунд
 
-#define USE_REGULAR_WATER_RECIRCULATION 0 // включать помпу по таймеру без срабатывания датчика
+constexpr uint8_t USE_REGULAR_WATER_RECIRCULATION = 1; // включать помпу по таймеру без срабатывания датчика
 
-#define USE_DEBUG_OUT 0 // включить вывод в сериал
+constexpr uint8_t USE_DEBUG_OUT = 0; // включить вывод отладочной информации в сериал
 
-#define USE_WATER_LEVEL_SENSOR 0 // использовать датчики уровня воды
+constexpr uint8_t USE_WATER_LEVEL_SENSOR = 1; // использовать датчики уровня воды (как минимум нижнего уровня)
 
 #if USE_WATER_LEVEL_SENSOR
 
-#define USE_H_LEVEL_SENSOR 0 // использовать датчик верхнего уровня воды
+constexpr uint8_t USE_H_LEVEL_SENSOR = 1; // использовать датчик верхнего уровня воды
 
 #endif
 
-#define USE_BUZZER 0 // использовать пищалку
+constexpr uint8_t USE_BUZZER = 1; // использовать пищалку
 
 #if USE_REGULAR_WATER_RECIRCULATION
+
 constexpr uint32_t PUMP_AUTOSTART_INTERVAL = 1800; // интервал включения помпы по таймеру, секунд
+
 #endif
 
 #if USE_BUZZER
-constexpr uint32_t LOW_LEVEL_BUZZER_TIMEOUT = 300; // интервал срабатывания пищалки при низком уровне воды, секунд
-#define USE_BUZZER_WHEN_STARTING_PUMP 0            // обозначать включение помпы коротким пиком
-#define USE_BUZZER_WHEN_BUTTON_CLICK 1             // обозначать коротким пиком клик кнопки
+
+constexpr uint32_t LOW_LEVEL_BUZZER_TIMEOUT = 300;   // интервал срабатывания пищалки при низком уровне воды, секунд
+constexpr uint8_t USE_BUZZER_WHEN_STARTING_PUMP = 0; // обозначать коротким пиком включение помпы
+constexpr uint8_t USE_BUZZER_WHEN_BUTTON_CLICK = 1;  // обозначать коротким пиком клик кнопки
+
 #endif
 
 // ==== пины для подключения периферии ===============
@@ -58,10 +62,15 @@ constexpr uint8_t PWR_ON_LED_PIN = 9;  // пин светодиода питан
 constexpr uint8_t PUMP_CONTROL_LEVEL = 1; // управляющий уровень помпы;
 
 constexpr uint8_t PIR_SENSOR_RESPONSE_LEVEL = 1; // логический уровень при срабатывании pir-датчика;
+
 #if USE_WATER_LEVEL_SENSOR
+
 constexpr uint8_t L_SENSOR_RESPONSE_LEVEL = 0; // логический уровень при срабатывании датчика низкого уровня воды (вода ниже датчика);
+
 #if USE_H_LEVEL_SENSOR
+
 constexpr uint8_t H_SENSOR_RESPONSE_LEVEL = 0; // логический уровень при срабатывании датчика высокого уровня воды (вода ниже датчик;
+
 #endif
 #endif
 
@@ -94,7 +103,7 @@ enum SystemMode
 
 // ===================================================
 
-#if USE_BUZZER_WHEN_BUTTON_CLICK == 1
+#if USE_BUZZER_WHEN_BUTTON_CLICK
 
 class adButton : public shButton
 {
@@ -174,7 +183,7 @@ void startLowLevelAlarm();
 #if USE_DEBUG_OUT
 void printCurrentMode();
 #endif
-#if USE_BUZZER_WHEN_STARTING_PUMP == 1
+#if USE_BUZZER_WHEN_STARTING_PUMP
 inline void beepPump();
 #endif
 
@@ -196,7 +205,7 @@ void setCurrentMode(SystemMode mode)
     break;
   case CONTINOUS_MODE:
     AD_PRINTLN(F("Pump turns on constantly"));
-#if USE_BUZZER_WHEN_STARTING_PUMP == 1
+#if USE_BUZZER_WHEN_STARTING_PUMP
     beepPump();
 #endif
 #if USE_REGULAR_WATER_RECIRCULATION
@@ -266,7 +275,9 @@ void btnCheck()
       // если помпа была остановлена по датчику низкого уровня воды, то восстановить прежний режим работы
       if (digitalRead(L_LEVEL_SENSOR_PIN) != L_SENSOR_RESPONSE_LEVEL)
       {
+#if USE_BUZZER
         tasks.stopTask(l_level_buzzer_on);
+#endif
         restoreCurrentMode();
       }
       break;
@@ -312,7 +323,7 @@ void pumpStaring()
   if (!tasks.getTaskState(pump_starting))
   {
     AD_PRINTLN(F("Pump starting"));
-#if USE_BUZZER_WHEN_STARTING_PUMP == 1
+#if USE_BUZZER_WHEN_STARTING_PUMP
     beepPump();
 #endif
     tasks.startTask(pump_starting);
@@ -373,7 +384,9 @@ void levelSensorGuard()
   {
     AD_PRINTLN(F("Low level sensor triggered"));
     setCurrentMode(PUMP_STOP_MODE);
+#if USE_BUZZER
     startLowLevelAlarm();
+#endif
   }
 }
 #endif
@@ -517,7 +530,7 @@ void printCurrentMode()
 }
 #endif
 
-#if USE_BUZZER_WHEN_STARTING_PUMP == 1
+#if USE_BUZZER_WHEN_STARTING_PUMP
 inline void beepPump()
 {
   tone(BUZZER_PIN, 2500, 10);
