@@ -4,46 +4,70 @@
 
 // ==== настройки ====================================
 
-#define PUMP_OPERATING_TIME 300      // время работы помпы, секунд
-#define PUMP_AUTOSTART_INTERVAL 1800 // интервал включения помпы по таймеру, секунд
-#define LOW_LEVEL_BUZZER_TIMEOUT 300 // интервал срабатывания пищалки при низком уровне воды, секунд
+constexpr uint32_t PUMP_OPERATING_TIME = 300; // время работы помпы, секунд
 
-#define USE_DEBUG_OUT 1 // включить вывод в сериал
+#define USE_REGULAR_WATER_RECIRCULATION 0 // включать помпу по таймеру без срабатывания датчика
 
-#define USE_BUZZER_WHEN_STARTING_PUMP 0 // обозначать включение помпы коротким пиком
+#define USE_DEBUG_OUT 0 // включить вывод в сериал
 
-#define USE_H_LEVEL_SENSOR 1 // использовать датчик верхнего уровня воды
+#define USE_WATER_LEVEL_SENSOR 0 // использовать датчики уровня воды
+
+#if USE_WATER_LEVEL_SENSOR
+
+#define USE_H_LEVEL_SENSOR 0 // использовать датчик верхнего уровня воды
+
+#endif
+
+#define USE_BUZZER 0 // использовать пищалку
+
+#if USE_REGULAR_WATER_RECIRCULATION
+constexpr uint32_t PUMP_AUTOSTART_INTERVAL = 1800; // интервал включения помпы по таймеру, секунд
+#endif
+
+#if USE_BUZZER
+constexpr uint32_t LOW_LEVEL_BUZZER_TIMEOUT = 300; // интервал срабатывания пищалки при низком уровне воды, секунд
+#define USE_BUZZER_WHEN_STARTING_PUMP 0            // обозначать включение помпы коротким пиком
+#define USE_BUZZER_WHEN_BUTTON_CLICK 1             // обозначать коротким пиком клик кнопки
+#endif
 
 // ==== пины для подключения периферии ===============
 
-#define BTN_PIN 2     // пин для подключения кнопки
-#define BUZZER_PIN A0 // пин для подключения пищалки
-#define PUMP_PIN 10   // пин для подключения помпы
+constexpr uint8_t BTN_PIN = 2;         // пин для подключения кнопки
+constexpr uint8_t PIR_SENSOR_PIN = A3; // пин датчика движения
+constexpr uint8_t PUMP_PIN = 10;       // пин для подключения помпы
+#if USE_BUZZER
+constexpr uint8_t BUZZER_PIN = A0; // пин для подключения пищалки
+#endif
 
-#define L_LEVEL_SENSOR_PIN A2 // пин датчика низкого уровня воды
-#define H_LEVEL_SENSOR_PIN A1 // пин датчика высокого уровня воды
-#define PIR_SENSOR_PIN A3     // пин датчика движения
+#if USE_WATER_LEVEL_SENSOR
+constexpr uint8_t L_LEVEL_SENSOR_PIN = A2; // пин датчика низкого уровня воды
+constexpr uint8_t H_LEVEL_SENSOR_PIN = A1; // пин датчика высокого уровня воды
 
-#define L_LEVEL_LED_PIN 6 // пин светодиода низкого уровня воды (красный)
-#define H_LEVEL_LED_PIN 7 // пин светодиода высокого уровня воды (зеленый)
+constexpr uint8_t L_LEVEL_LED_PIN = 6; // пин светодиода низкого уровня воды (красный)
+constexpr uint8_t H_LEVEL_LED_PIN = 7; // пин светодиода высокого уровня воды (зеленый)
+#endif
 
-#define PWR_OFF_LED_PIN 8 // пин светодиода питания (красный)
-#define PWR_ON_LED_PIN 9  // пин светодиода питания (зеленый)
+constexpr uint8_t PWR_OFF_LED_PIN = 8; // пин светодиода питания (красный)
+constexpr uint8_t PWR_ON_LED_PIN = 9;  // пин светодиода питания (зеленый)
 
 // ==== управляющие уровни ===========================
 
 // уровни срабатывания датчиков и управляющие уровни выходов;
 // могут быть 1 (HIGN) или 0 (LOW)
 
-#define PUMP_CONTROL_LEVEL 1 // управляющий уровень помпы;
+constexpr uint8_t PUMP_CONTROL_LEVEL = 1; // управляющий уровень помпы;
 
-#define PIR_SENSOR_RESPONSE_LEVEL 1 // логический уровень при срабатывании pir-датчика;
-#define L_SENSOR_RESPONSE_LEVEL 0   // логический уровень при срабатывании датчика низкого уровня воды (вода ниже датчика);
-#define H_SENSOR_RESPONSE_LEVEL 0   // логический уровень при срабатывании датчика высокого уровня воды (вода ниже датчик;
+constexpr uint8_t PIR_SENSOR_RESPONSE_LEVEL = 1; // логический уровень при срабатывании pir-датчика;
+#if USE_WATER_LEVEL_SENSOR
+constexpr uint8_t L_SENSOR_RESPONSE_LEVEL = 0; // логический уровень при срабатывании датчика низкого уровня воды (вода ниже датчика);
+#if USE_H_LEVEL_SENSOR
+constexpr uint8_t H_SENSOR_RESPONSE_LEVEL = 0; // логический уровень при срабатывании датчика высокого уровня воды (вода ниже датчик;
+#endif
+#endif
 
 // ==== EEPROM =======================================
 
-#define EEPROM_INDEX_FOR_CUR_MODE 10 // индекс в EEPROM для сохранения текущего режима (1 байт)
+constexpr int EEPROM_INDEX_FOR_CUR_MODE = 10; // индекс в EEPROM для сохранения текущего режима (1 байт)
 
 // ===================================================
 
@@ -61,13 +85,50 @@ enum SystemMode
 {
   DEFAULT_MODE,   // автоматический режим работы
   CONTINOUS_MODE, // режим непрерывной работы помпы
-  STANDBAY_MODE,  // спящий режим
-  PUMP_STOP_MODE  // режим остановки помпы из-за низкого уровня воды
+  STANDBAY_MODE   // спящий режим
+#if USE_WATER_LEVEL_SENSOR
+  ,
+  PUMP_STOP_MODE // режим остановки помпы из-за низкого уровня воды
+#endif
 };
 
 // ===================================================
 
+#if USE_BUZZER_WHEN_BUTTON_CLICK == 1
+
+class adButton : public shButton
+{
+public:
+  adButton(uint8_t _pin) : shButton(_pin)
+  {
+    shButton::setVirtualClickOn();
+    shButton::setLongClickMode(LCM_ONLYONCE);
+  }
+
+  uint8_t getButtonState();
+};
+
+uint8_t adButton::getButtonState()
+{
+  uint8_t state = shButton::getButtonState();
+  switch (state)
+  {
+  case BTN_DOWN:
+  case BTN_DBLCLICK:
+  case BTN_LONGCLICK:
+    tone(BUZZER_PIN, 2500, 10);
+    break;
+  }
+  return (state);
+}
+
+adButton btn(BTN_PIN);
+
+#else
+
 shButton btn(BTN_PIN);
+
+#endif
 
 // датчик движения обрабатываем как обычную кнопку
 #if PIR_SENSOR_RESPONSE_LEVEL == 0
@@ -76,14 +137,20 @@ shButton pir(PIR_SENSOR_PIN);
 shButton pir(PIR_SENSOR_PIN, PULL_DOWN);
 #endif
 
-shTaskManager tasks(6);
+shTaskManager tasks;
 
-shHandle pump_starting;       // включение режима работы помпы на пять минут
-shHandle pump_guard;          // собственно, отслеживание необходимости работы помпы
+shHandle pump_starting; // включение режима работы помпы на пять минут
+shHandle pump_guard;    // собственно, отслеживание необходимости работы помпы
+#if USE_REGULAR_WATER_RECIRCULATION
 shHandle start_pump_by_timer; // периодическое включение помпы по таймеру
-shHandle level_sensor_guard;  // отслеживание датчика низкого уровня воды
-shHandle led_guard;           // управление светодиодами
-shHandle l_level_buzzer_on;   // сигнал о низком уровне воды
+#endif
+#if USE_WATER_LEVEL_SENSOR
+shHandle level_sensor_guard; // отслеживание датчика низкого уровня воды
+#endif
+shHandle led_guard; // управление светодиодами
+#if USE_BUZZER && USE_WATER_LEVEL_SENSOR
+shHandle l_level_buzzer_on; // сигнал о низком уровне воды
+#endif
 
 SystemMode current_mode = DEFAULT_MODE;
 
@@ -94,12 +161,21 @@ void restoreCurrentMode();
 void btnCheck();
 void pumpStaring();
 void pumpGuard();
+#if USE_REGULAR_WATER_RECIRCULATION
 void startPumpByTimer();
+#endif
+#if USE_WATER_LEVEL_SENSOR
 void levelSensorGuard();
+#endif
 void ledGuard();
+#if USE_BUZZER && USE_WATER_LEVEL_SENSOR
 void startLowLevelAlarm();
+#endif
 #if USE_DEBUG_OUT
 void printCurrentMode();
+#endif
+#if USE_BUZZER_WHEN_STARTING_PUMP == 1
+inline void beepPump();
 #endif
 
 // ===================================================
@@ -113,22 +189,32 @@ void setCurrentMode(SystemMode mode)
   switch (current_mode)
   {
   case DEFAULT_MODE:
+#if USE_REGULAR_WATER_RECIRCULATION
     tasks.startTask(start_pump_by_timer);
+#endif
     tasks.stopTask(pump_starting);
     break;
   case CONTINOUS_MODE:
     AD_PRINTLN(F("Pump turns on constantly"));
-#if USE_BUZZER_WHEN_STARTING_PUMP
-    tone(BUZZER_PIN, 2500, 10);
+#if USE_BUZZER_WHEN_STARTING_PUMP == 1
+    beepPump();
 #endif
+#if USE_REGULAR_WATER_RECIRCULATION
     tasks.stopTask(start_pump_by_timer);
+#endif
     break;
   case STANDBAY_MODE:
+#if USE_REGULAR_WATER_RECIRCULATION
     tasks.stopTask(start_pump_by_timer);
+#endif
     break;
+#if USE_WATER_LEVEL_SENSOR
   case PUMP_STOP_MODE:
+#if USE_REGULAR_WATER_RECIRCULATION
     tasks.stopTask(start_pump_by_timer);
+#endif
     break;
+#endif
   }
 
   if (current_mode < STANDBAY_MODE)
@@ -175,6 +261,7 @@ void btnCheck()
       // в автоматическом режиме включает помпу на пять минут, если она выключена, и наоборот
       pumpStaring();
       break;
+#if USE_WATER_LEVEL_SENSOR
     case PUMP_STOP_MODE:
       // если помпа была остановлена по датчику низкого уровня воды, то восстановить прежний режим работы
       if (digitalRead(L_LEVEL_SENSOR_PIN) != L_SENSOR_RESPONSE_LEVEL)
@@ -183,6 +270,7 @@ void btnCheck()
         restoreCurrentMode();
       }
       break;
+#endif
     case STANDBAY_MODE:
       // при выходе из спящего режима восстановить прежний режим работы
       restoreCurrentMode();
@@ -224,18 +312,22 @@ void pumpStaring()
   if (!tasks.getTaskState(pump_starting))
   {
     AD_PRINTLN(F("Pump starting"));
-#if USE_BUZZER_WHEN_STARTING_PUMP
-    tone(BUZZER_PIN, 2500, 10);
+#if USE_BUZZER_WHEN_STARTING_PUMP == 1
+    beepPump();
 #endif
     tasks.startTask(pump_starting);
+#if USE_REGULAR_WATER_RECIRCULATION
     tasks.stopTask(start_pump_by_timer);
+#endif
   }
   else
   {
     AD_PRINTLN(F("Pump stopped"));
     tasks.stopTask(pump_starting);
     // перезапускаем таймер периодического включения помпы
+#if USE_REGULAR_WATER_RECIRCULATION
     tasks.startTask(start_pump_by_timer);
+#endif
   }
 }
 
@@ -263,6 +355,7 @@ void pumpGuard()
   digitalWrite(PUMP_PIN, pump_state);
 }
 
+#if USE_REGULAR_WATER_RECIRCULATION
 void startPumpByTimer()
 {
   if (current_mode == DEFAULT_MODE && !tasks.getTaskState(pump_starting))
@@ -271,7 +364,9 @@ void startPumpByTimer()
     pumpStaring();
   }
 }
+#endif
 
+#if USE_WATER_LEVEL_SENSOR
 void levelSensorGuard()
 {
   if (digitalRead(L_LEVEL_SENSOR_PIN) == L_SENSOR_RESPONSE_LEVEL)
@@ -281,6 +376,7 @@ void levelSensorGuard()
     startLowLevelAlarm();
   }
 }
+#endif
 
 void check_num(uint8_t &_num)
 {
@@ -324,6 +420,7 @@ void ledGuard()
     digitalWrite(PWR_ON_LED_PIN, LOW);
   }
 
+#if USE_WATER_LEVEL_SENSOR
   if (current_mode != STANDBAY_MODE)
   {
     // если сработал датчик нижнего уровня, светодиод уровня мигает красным с частотой 1Гц
@@ -360,8 +457,10 @@ void ledGuard()
     digitalWrite(H_LEVEL_LED_PIN, LOW);
     digitalWrite(L_LEVEL_LED_PIN, LOW);
   }
+#endif
 }
 
+#if USE_BUZZER && USE_WATER_LEVEL_SENSOR
 void startLowLevelAlarm()
 {
   static const PROGMEM uint32_t pick[2][12] = {
@@ -394,6 +493,7 @@ void startLowLevelAlarm()
     n = 0;
   }
 }
+#endif
 
 #if USE_DEBUG_OUT
 void printCurrentMode()
@@ -417,6 +517,13 @@ void printCurrentMode()
 }
 #endif
 
+#if USE_BUZZER_WHEN_STARTING_PUMP == 1
+inline void beepPump()
+{
+  tone(BUZZER_PIN, 2500, 10);
+}
+#endif
+
 // ===================================================
 
 void setup()
@@ -425,19 +532,22 @@ void setup()
   Serial.begin(115200);
 #endif
 
-  btn.setVirtualClickOn();
-  btn.setLongClickMode(LCM_ONLYONCE);
   pir.setTimeoutOfDebounce(0);
 
   // ===================================================
 
   digitalWrite(PUMP_PIN, !PUMP_CONTROL_LEVEL);
   pinMode(PUMP_PIN, OUTPUT);
+#if USE_WATER_LEVEL_SENSOR
   pinMode(L_LEVEL_LED_PIN, OUTPUT);
+#if USE_H_LEVEL_SENSOR
   pinMode(H_LEVEL_LED_PIN, OUTPUT);
+#endif
+#endif
   pinMode(PWR_ON_LED_PIN, OUTPUT);
   pinMode(PWR_OFF_LED_PIN, OUTPUT);
 
+#if USE_WATER_LEVEL_SENSOR
 #if L_SENSOR_RESPONSE_LEVEL == 0
   pinMode(L_LEVEL_SENSOR_PIN, INPUT_PULLUP);
 #else
@@ -452,19 +562,38 @@ void setup()
   pinMode(H_LEVEL_SENSOR_PIN, INPUT);
 #endif
 #endif
+#endif
 
   // ===================================================
 
   restoreCurrentMode();
 
   // ===================================================
+  uint8_t task_num = 3; // базовое количество задач
+
+#if USE_REGULAR_WATER_RECIRCULATION
+  task_num++;
+#endif
+#if USE_WATER_LEVEL_SENSOR
+  task_num++;
+#endif
+#if USE_BUZZER && USE_WATER_LEVEL_SENSOR
+  task_num++;
+#endif
+  tasks.init(task_num);
 
   pump_starting = tasks.addTask(PUMP_OPERATING_TIME * 1000ul, pumpStaring, false);
+#if USE_WATER_LEVEL_SENSOR
   level_sensor_guard = tasks.addTask(5ul, levelSensorGuard);
+#endif
   pump_guard = tasks.addTask(5ul, pumpGuard);
+#if USE_REGULAR_WATER_RECIRCULATION
   start_pump_by_timer = tasks.addTask(PUMP_AUTOSTART_INTERVAL * 1000ul, startPumpByTimer);
+#endif
   led_guard = tasks.addTask(50ul, ledGuard);
+#if USE_BUZZER && USE_WATER_LEVEL_SENSOR
   l_level_buzzer_on = tasks.addTask(50ul, startLowLevelAlarm, false);
+#endif
 }
 
 void loop()
