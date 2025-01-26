@@ -54,14 +54,16 @@ constexpr uint8_t BUZZER_PIN = A0; // пин для подключения пи�
 
 #if USE_WATER_LEVEL_SENSOR
 constexpr uint8_t L_LEVEL_SENSOR_PIN = A2; // пин датчика низкого уровня воды
-constexpr uint8_t H_LEVEL_SENSOR_PIN = A1; // пин датчика высокого уровня воды
-
 constexpr uint8_t L_LEVEL_LED_PIN = 6; // пин светодиода низкого уровня воды (красный)
+
+#if USE_H_LEVEL_SENSOR
+constexpr uint8_t H_LEVEL_SENSOR_PIN = A1; // пин датчика высокого уровня воды
 constexpr uint8_t H_LEVEL_LED_PIN = 7; // пин светодиода высокого уровня воды (зеленый)
 #endif
+#endif
 
-constexpr uint8_t PWR_OFF_LED_PIN = 8; // пин светодиода питания (красный)
-constexpr uint8_t PWR_ON_LED_PIN = 9;  // пин светодиода питания (зеленый)
+constexpr uint8_t PWR_OFF_LED_PIN = 8; // пин светодиода статуса (красный)
+constexpr uint8_t PWR_ON_LED_PIN = 9;  // пин светодиода статуса (зеленый)
 
 // ==== управляющие уровни ===========================
 
@@ -73,13 +75,9 @@ constexpr uint8_t PUMP_CONTROL_LEVEL = 1; // управляющий уровен
 constexpr uint8_t PIR_SENSOR_RESPONSE_LEVEL = 1; // логический уровень при срабатывании pir-датчика;
 
 #if USE_WATER_LEVEL_SENSOR
-
 constexpr uint8_t L_SENSOR_RESPONSE_LEVEL = 0; // логический уровень при срабатывании датчика низкого уровня воды (вода ниже датчика);
-
 #if USE_H_LEVEL_SENSOR
-
-constexpr uint8_t H_SENSOR_RESPONSE_LEVEL = 0; // логический уровень при срабатывании датчика высокого уровня воды (вода ниже датчик;
-
+constexpr uint8_t H_SENSOR_RESPONSE_LEVEL = 0; // логический уровень при срабатывании датчика высокого уровня воды (вода ниже датчика);
 #endif
 #endif
 
@@ -112,6 +110,30 @@ enum SystemMode
 
 // ===================================================
 
+void setCurrentMode(SystemMode mode);
+void restoreCurrentMode();
+void btnCheck();
+void pumpStaring();
+void pumpGuard();
+#if USE_REGULAR_WATER_RECIRCULATION
+void startPumpByTimer();
+#endif
+#if USE_WATER_LEVEL_SENSOR
+void levelSensorGuard();
+#endif
+void ledGuard();
+#if USE_BUZZER_WHEN_LOW_WATER_LEVEL
+void startLowLevelAlarm();
+#endif
+#if USE_DEBUG_OUT
+void printCurrentMode();
+#endif
+#if USE_BUZZER_WHEN_STARTING_PUMP || USE_BUZZER_WHEN_BUTTON_CLICK
+inline void beepPump();
+#endif
+
+// ===================================================
+
 class adButton : public shButton
 {
 public:
@@ -134,7 +156,7 @@ uint8_t adButton::getButtonState()
   case BTN_DOWN:
   case BTN_DBLCLICK:
   case BTN_LONGCLICK:
-    tone(BUZZER_PIN, 2500, 10);
+    beepPump();
     break;
   }
   return (state);
@@ -159,37 +181,13 @@ shHandle start_pump_by_timer; // периодическое включение �
 #endif
 #if USE_WATER_LEVEL_SENSOR
 shHandle level_sensor_guard; // отслеживание датчика низкого уровня воды
-#endif
-shHandle led_guard; // управление светодиодами
 #if USE_BUZZER_WHEN_LOW_WATER_LEVEL
 shHandle l_level_buzzer_on; // сигнал о низком уровне воды
 #endif
+#endif
+shHandle led_guard; // управление светодиодами
 
 SystemMode current_mode = DEFAULT_MODE;
-
-// ===================================================
-
-void setCurrentMode(SystemMode mode);
-void restoreCurrentMode();
-void btnCheck();
-void pumpStaring();
-void pumpGuard();
-#if USE_REGULAR_WATER_RECIRCULATION
-void startPumpByTimer();
-#endif
-#if USE_WATER_LEVEL_SENSOR
-void levelSensorGuard();
-#endif
-void ledGuard();
-#if USE_BUZZER_WHEN_LOW_WATER_LEVEL
-void startLowLevelAlarm();
-#endif
-#if USE_DEBUG_OUT
-void printCurrentMode();
-#endif
-#if USE_BUZZER_WHEN_STARTING_PUMP
-inline void beepPump();
-#endif
 
 // ===================================================
 
@@ -537,7 +535,7 @@ void printCurrentMode()
 }
 #endif
 
-#if USE_BUZZER_WHEN_STARTING_PUMP
+#if USE_BUZZER_WHEN_STARTING_PUMP || USE_BUZZER_WHEN_BUTTON_CLICK
 inline void beepPump()
 {
   tone(BUZZER_PIN, 2500, 10);
