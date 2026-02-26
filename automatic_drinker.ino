@@ -326,6 +326,9 @@ void btnCheck()
       {
         // иначе перезапустить таймер работы помпы
         tasks.restartTask(pump_starting);
+#if USE_REGULAR_WATER_RECIRCULATION
+        tasks.stopTask(start_pump_by_timer);
+#endif
       }
     }
     break;
