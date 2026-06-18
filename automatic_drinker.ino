@@ -54,11 +54,11 @@ constexpr uint8_t BUZZER_PIN = A0; // пин для подключения пи�
 
 #if USE_WATER_LEVEL_SENSOR
 constexpr uint8_t L_LEVEL_SENSOR_PIN = A2; // пин датчика низкого уровня воды
-constexpr uint8_t L_LEVEL_LED_PIN = 6; // пин светодиода низкого уровня воды (красный)
+constexpr uint8_t L_LEVEL_LED_PIN = 6;     // пин светодиода низкого уровня воды (красный)
 
 #if USE_H_LEVEL_SENSOR
 constexpr uint8_t H_LEVEL_SENSOR_PIN = A1; // пин датчика высокого уровня воды
-constexpr uint8_t H_LEVEL_LED_PIN = 7; // пин светодиода высокого уровня воды (зеленый)
+constexpr uint8_t H_LEVEL_LED_PIN = 7;     // пин светодиода высокого уровня воды (зеленый)
 #endif
 #endif
 
@@ -113,7 +113,7 @@ enum SystemMode
 void setCurrentMode(SystemMode mode);
 void restoreCurrentMode();
 void btnCheck();
-void pumpStaring();
+void pumpStartStop();
 void pumpGuard();
 #if USE_REGULAR_WATER_RECIRCULATION
 void startPumpByTimer();
@@ -273,7 +273,7 @@ void btnCheck()
     {
     case DEFAULT_MODE:
       // в автоматическом режиме включает помпу на пять минут, если она выключена, и наоборот
-      pumpStaring();
+      pumpStartStop();
       break;
 #if USE_WATER_LEVEL_SENSOR
     case PUMP_STOP_MODE:
@@ -313,17 +313,29 @@ void btnCheck()
 
   switch (pir.getButtonState())
   {
-  case BTN_DOWN:
+  case BTN_DOWN: // если сработал датчик движения
     AD_PRINTLN(F("Pir sensor triggered"));
-    if (current_mode == DEFAULT_MODE && !tasks.getTaskState(pump_starting))
+    if (current_mode == DEFAULT_MODE)
     {
-      pumpStaring();
+      if (!tasks.getTaskState(pump_starting))
+      {
+        // если помпа выключена, включить
+        pumpStartStop();
+      }
+      else
+      {
+        // иначе перезапустить таймер работы помпы
+        tasks.restartTask(pump_starting);
+#if USE_REGULAR_WATER_RECIRCULATION
+        tasks.stopTask(start_pump_by_timer);
+#endif
+      }
     }
     break;
   }
 }
 
-void pumpStaring()
+void pumpStartStop()
 {
   if (!tasks.getTaskState(pump_starting))
   {
@@ -377,7 +389,7 @@ void startPumpByTimer()
   if (current_mode == DEFAULT_MODE && !tasks.getTaskState(pump_starting))
   {
     AD_PRINTLN(F("Pump starting on a timer"));
-    pumpStaring();
+    pumpStartStop();
   }
 }
 #endif
@@ -600,7 +612,7 @@ void setup()
 #endif
   tasks.init(task_num);
 
-  pump_starting = tasks.addTask(PUMP_OPERATING_TIME * 1000ul, pumpStaring, false);
+  pump_starting = tasks.addTask(PUMP_OPERATING_TIME * 1000ul, pumpStartStop, false);
 #if USE_WATER_LEVEL_SENSOR
   level_sensor_guard = tasks.addTask(5ul, levelSensorGuard);
 #endif

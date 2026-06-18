@@ -1,3 +1,4 @@
 _build/*
 .vscode/*
-burn/burn_m168p.sh
+burn/*
+.vscode/*
