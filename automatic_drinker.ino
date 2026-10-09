@@ -595,10 +595,6 @@ void setup()
 #endif
 
   // ===================================================
-
-  restoreCurrentMode();
-
-  // ===================================================
   uint8_t task_num = 3; // базовое количество задач
 
 #if USE_REGULAR_WATER_RECIRCULATION
@@ -624,6 +620,9 @@ void setup()
 #if USE_BUZZER_WHEN_LOW_WATER_LEVEL
   l_level_buzzer_on = tasks.addTask(50ul, startLowLevelAlarm, false);
 #endif
+
+  // ===================================================
+  restoreCurrentMode();
 }
 
 void loop()
