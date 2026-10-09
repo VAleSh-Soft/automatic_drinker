@@ -99,11 +99,11 @@ constexpr int EEPROM_INDEX_FOR_CUR_MODE = 10; // индекс в EEPROM для �
 
 enum SystemMode
 {
-  DEFAULT_MODE,   // автоматический режим работы
-  CONTINOUS_MODE, // режим непрерывной работы помпы
-  STANDBAY_MODE   // спящий режим
+  DEFAULT_MODE,    // автоматический режим работы
+  CONTINUOUS_MODE, // режим непрерывной работы помпы
+  STANDBY_MODE     // спящий режим
 #if USE_WATER_LEVEL_SENSOR
-  ,
+      ,
   PUMP_STOP_MODE // режим остановки помпы из-за низкого уровня воды
 #endif
 };
@@ -205,7 +205,7 @@ void setCurrentMode(SystemMode mode)
 #endif
     tasks.stopTask(pump_starting);
     break;
-  case CONTINOUS_MODE:
+  case CONTINUOUS_MODE:
     AD_PRINTLN(F("Pump turns on constantly"));
 #if USE_BUZZER_WHEN_STARTING_PUMP
     beepPump();
@@ -214,7 +214,7 @@ void setCurrentMode(SystemMode mode)
     tasks.stopTask(start_pump_by_timer);
 #endif
     break;
-  case STANDBAY_MODE:
+  case STANDBY_MODE:
 #if USE_REGULAR_WATER_RECIRCULATION
     tasks.stopTask(start_pump_by_timer);
 #endif
@@ -228,7 +228,7 @@ void setCurrentMode(SystemMode mode)
 #endif
   }
 
-  if (current_mode < STANDBAY_MODE)
+  if (current_mode < STANDBY_MODE)
   {
     EEPROM.update(EEPROM_INDEX_FOR_CUR_MODE, (uint8_t)current_mode);
   }
@@ -237,10 +237,7 @@ void setCurrentMode(SystemMode mode)
 void restoreCurrentMode()
 {
   current_mode = (SystemMode)EEPROM.read(EEPROM_INDEX_FOR_CUR_MODE);
-  if (current_mode > STANDBAY_MODE)
-  {
-    setCurrentMode(DEFAULT_MODE);
-  }
+  setCurrentMode((current_mode >= STANDBY_MODE) ? DEFAULT_MODE : current_mode);
 #if USE_BUZZER_WHEN_LOW_WATER_LEVEL
   tasks.stopTask(l_level_buzzer_on);
 #endif
@@ -256,9 +253,9 @@ void btnCheck()
   case BTN_LONGCLICK:
     AD_PRINTLN(F("Button - long click"));
     // длинный клик - переключает в спящий режимы
-    if (current_mode != STANDBAY_MODE)
+    if (current_mode != STANDBY_MODE)
     {
-      setCurrentMode(STANDBAY_MODE);
+      setCurrentMode(STANDBY_MODE);
     }
     else
     // или, если модуль был в спящем режиме - восстанавливает прежний режим
@@ -287,7 +284,7 @@ void btnCheck()
       }
       break;
 #endif
-    case STANDBAY_MODE:
+    case STANDBY_MODE:
       // при выходе из спящего режима восстановить прежний режим работы
       restoreCurrentMode();
       break;
@@ -302,7 +299,7 @@ void btnCheck()
     // двойной клик в автоматическом режиме включает непрерывный режим
     if (current_mode == DEFAULT_MODE)
     {
-      setCurrentMode(CONTINOUS_MODE);
+      setCurrentMode(CONTINUOUS_MODE);
     }
     else
     {
@@ -367,7 +364,7 @@ void pumpGuard()
   case DEFAULT_MODE:
     pump_state = tasks.getTaskState(pump_starting);
     break;
-  case CONTINOUS_MODE:
+  case CONTINUOUS_MODE:
     pump_state = HIGH;
     break;
   default:
@@ -424,7 +421,7 @@ void check_num(uint8_t &_num)
 void ledGuard()
 {
   // светодиод питания светится красным только в спящем режиме
-  digitalWrite(PWR_OFF_LED_PIN, (current_mode == STANDBAY_MODE));
+  digitalWrite(PWR_OFF_LED_PIN, (current_mode == STANDBY_MODE));
 
   static uint8_t blink_num = 0;
   static uint8_t pwr_on_num = 0;
@@ -433,9 +430,9 @@ void ledGuard()
   /* в остальных случаях он светится зеленым
      - либо мигает с частотой 1Гц (режим постоянно включенной помпы)
      - либо мигает плавно в остальных режимах */
-  if (current_mode != STANDBAY_MODE)
+  if (current_mode != STANDBY_MODE)
   {
-    if (current_mode == CONTINOUS_MODE)
+    if (current_mode == CONTINUOUS_MODE)
     {
       digitalWrite(PWR_ON_LED_PIN, (blink_num >= 10));
       check_num(blink_num);
@@ -456,12 +453,14 @@ void ledGuard()
   }
 
 #if USE_WATER_LEVEL_SENSOR
-  if (current_mode != STANDBAY_MODE)
+  if (current_mode != STANDBY_MODE)
   {
     // если сработал датчик нижнего уровня, светодиод уровня мигает красным с частотой 1Гц
     if (current_mode == PUMP_STOP_MODE)
     {
+#if USE_H_LEVEL_SENSOR
       digitalWrite(H_LEVEL_LED_PIN, LOW);
+#endif
       digitalWrite(L_LEVEL_LED_PIN, (blink_num < 10));
       check_num(blink_num);
     }
@@ -481,15 +480,14 @@ void ledGuard()
         // иначе светодиод уровня горит зеленым
         digitalWrite(H_LEVEL_LED_PIN, HIGH);
       }
-#else
-      // иначе светодиод уровня горит зеленым
-      digitalWrite(H_LEVEL_LED_PIN, HIGH);
 #endif
     }
   }
   else
   {
+#if USE_H_LEVEL_SENSOR
     digitalWrite(H_LEVEL_LED_PIN, LOW);
+#endif
     digitalWrite(L_LEVEL_LED_PIN, LOW);
   }
 #endif
@@ -534,15 +532,17 @@ void printCurrentMode()
   case DEFAULT_MODE:
     AD_PRINTLN(F("default"));
     break;
-  case CONTINOUS_MODE:
+  case CONTINUOUS_MODE:
     AD_PRINTLN(F("continuous"));
     break;
-  case STANDBAY_MODE:
+  case STANDBY_MODE:
     AD_PRINTLN(F("standby"));
     break;
+#if USE_WATER_LEVEL_SENSOR
   case PUMP_STOP_MODE:
     AD_PRINTLN(F("pump stopped"));
     break;
+#endif
   }
 }
 #endif
